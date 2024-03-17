@@ -15,7 +15,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-extern bool tempsie_get_temp_filename(char *buffer, unsigned buffer_size);
+extern bool tempsie_get_temp_filename(const char *prefix, char *buffer,
+                                      unsigned buffer_size);
 #ifdef __cplusplus
 }
 #endif
@@ -25,11 +26,39 @@ extern bool tempsie_get_temp_filename(char *buffer, unsigned buffer_size);
 #define TEMPSIE_ERROR(x)
 #endif
 
-bool tempsie_get_temp_filename(char *buffer, unsigned buffer_size) {
-  TEMPSIE_ERROR("TBD");
-  return false;
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
+static void tempsie__error(const char *msg) {
+  LPSTR buf = NULL;
+  FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+                    FORMAT_MESSAGE_IGNORE_INSERTS,
+                NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                buf, 0, NULL);
+  TEMPSIE_ERROR((const char *)buf);
+  LocalFree(buf);
 }
-#endif
+
+bool tempsie_get_temp_filename(const char *prefix, char *buffer,
+                               unsigned buffer_size) {
+  char path[MAX_PATH] = {0};
+  auto ret = GetTempPath(sizeof(path), path);
+  if (ret > sizeof(path) || ret == 0) {
+    tempsie__error("GetTempPath");
+    return false;
+  }
+  char file[MAX_PATH] = {0};
+  if (0 == GetTempFileName(path, prefix, 0, file)) {
+    tempsie__error("GetTempFileName");
+    return false;
+  }
+  strcpy_s(buffer, buffer_size, file);
+  return true;
+}
+#endif // _WIN32
+
+#endif // TEMPSIE_IMPLEMENTATION
 
 // MIT License
 //
