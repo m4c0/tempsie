@@ -15,8 +15,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-extern bool tempsie_get_temp_filename(const char *prefix, char *buffer,
-                                      unsigned buffer_size);
+extern int tempsie_get_temp_filename(const char *prefix, char *buffer,
+                                     unsigned buffer_size);
 #ifdef __cplusplus
 }
 #endif
@@ -40,21 +40,42 @@ static void tempsie__error(const char *msg) {
   LocalFree(buf);
 }
 
-bool tempsie_get_temp_filename(const char *prefix, char *buffer,
+int tempsie_get_temp_filename(const char *prefix, char *buffer,
                                unsigned buffer_size) {
   char path[MAX_PATH] = {0};
   auto ret = GetTempPath(sizeof(path), path);
   if (ret > sizeof(path) || ret == 0) {
     tempsie__error("GetTempPath");
-    return false;
+    return 1;
   }
   char file[MAX_PATH] = {0};
   if (0 == GetTempFileName(path, prefix, 0, file)) {
     tempsie__error("GetTempFileName");
-    return false;
+    return 1;
   }
   strcpy_s(buffer, buffer_size, file);
-  return true;
+  return 0;
+}
+#else // !_WIN32
+#include <errno.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+int tempsie_get_temp_filename(const char *prefix, char *buffer,
+                              unsigned buffer_size) {
+  char buf[1024] = P_tmpdir;
+  strcat(buf, "/");
+  strcat(buf, prefix);
+  strcat(buf, "-XXXXXX");
+  int fd = mkstemp(buf);
+  if (fd == -1) {
+    TEMPSIE_ERROR("Failed to get a unique temporary file name");
+    return 1;
+  }
+  strncpy(buffer, buf, buffer_size);
+  close(fd);
+  return 0;
 }
 #endif // _WIN32
 
