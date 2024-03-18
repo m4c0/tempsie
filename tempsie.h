@@ -58,6 +58,7 @@ int tempsie_get_temp_filename(const char *prefix, char *buffer,
 }
 #else // !_WIN32
 #include <errno.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
