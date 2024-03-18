@@ -43,7 +43,7 @@ static void tempsie__error(const char *msg) {
 int tempsie_get_temp_filename(const char *prefix, char *buffer,
                                unsigned buffer_size) {
   char path[MAX_PATH] = {0};
-  auto ret = GetTempPath(sizeof(path), path);
+  int ret = GetTempPath(sizeof(path), path);
   if (ret > sizeof(path) || ret == 0) {
     tempsie__error("GetTempPath");
     return 1;
